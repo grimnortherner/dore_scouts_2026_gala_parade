@@ -189,6 +189,89 @@
     font-weight: 600;
     font-size: 1.15rem;
   }
+
+  /* Focus box: weather + live updates */
+  .focus {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 1.4rem 1.5rem;
+    margin-bottom: 1.75rem;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+  @media (min-width: 620px) {
+    .focus { grid-template-columns: 1fr 1fr; }
+  }
+  .focus-block h3 {
+    margin: 0 0 0.7rem;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+  }
+  .weather-card {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+  }
+  .weather-icon { font-size: 2.6rem; line-height: 1; }
+  .weather-temp {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--navy);
+  }
+  .weather-desc { color: var(--text); font-size: 0.95rem; }
+  .weather-badge {
+    display: inline-block;
+    margin-top: 0.35rem;
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .badge-forecast { background: #e6eefc; color: #1a4fa0; }
+  .badge-live { background: #e3f8ea; color: #17803d; }
+  .badge-frozen { background: #f1eee6; color: #7a6a3e; }
+  .weather-note {
+    margin-top: 0.6rem;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .updates-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+  .update-item {
+    border-left: 3px solid var(--gold);
+    padding-left: 0.75rem;
+  }
+  .update-item .update-title {
+    font-weight: 700;
+    color: var(--navy);
+    font-size: 0.92rem;
+    margin-bottom: 0.2rem;
+  }
+  .update-item p { margin: 0; font-size: 0.92rem; }
+  .uniform-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 0.6rem;
+    font-size: 0.88rem;
+  }
+  .uniform-table th, .uniform-table td {
+    text-align: left;
+    padding: 0.3rem 0.5rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .uniform-table th { color: var(--muted); font-weight: 600; }
 </style>
 </head>
 <body>
@@ -200,6 +283,38 @@
 </header>
 
 <main>
+
+  <div class="focus">
+    <div class="focus-block">
+      <h3>Weather &mdash; Dore, Sheffield</h3>
+      <div class="weather-card">
+        <div class="weather-icon" id="weatherIcon">&#9925;</div>
+        <div>
+          <div class="weather-temp" id="weatherTemp">&hellip;</div>
+          <div class="weather-desc" id="weatherDesc">Loading forecast&hellip;</div>
+          <span class="weather-badge badge-forecast" id="weatherBadge">Forecast</span>
+        </div>
+      </div>
+      <div class="weather-note" id="weatherNote">Forecast for the parade window, 12:00&ndash;12:30pm, 11 July.</div>
+    </div>
+    <div class="focus-block">
+      <h3>Live Updates</h3>
+      <ul class="updates-list" id="updatesList">
+        <li class="update-item">
+          <div class="update-title">&#9728;&#65039; Hot weather &mdash; uniform guidance</div>
+          <p>Forecast is hot &amp; sunny, so please strike a sensible balance with uniform &mdash; comfort and sun safety first. For example, <strong>Beavers</strong>: polo shirt rather than jumper, shorts rather than trousers, and a sun hat if you have one. The same balance applies across all sections &mdash; smart, but not overdressed.</p>
+          <table class="uniform-table">
+            <thead><tr><th>Instead of&hellip;</th><th>Wear&hellip;</th></tr></thead>
+            <tbody>
+              <tr><td>Jumper</td><td>Polo shirt / t-shirt</td></tr>
+              <tr><td>Trousers</td><td>Shorts</td></tr>
+              <tr><td>&mdash;</td><td>Sun hat &amp; sun cream</td></tr>
+            </tbody>
+          </table>
+        </li>
+      </ul>
+    </div>
+  </div>
 
   <div class="intro">
     <p>The Dore Scouts Gala Parade is a proud and lively tradition, and a fantastic way to start a day of fun, celebration and community spirit. A huge amount of work has gone into making the gala happen, with many leaders, volunteers, parents and supporters giving huge amounts of time and energy over the preceding weeks / months.</p>
@@ -310,6 +425,139 @@
 <footer>
   267th Dore Scouts Gala Parade &middot; 2026
 </footer>
+
+<script>
+(function () {
+  // The Meadway / Dore, Sheffield
+  var LAT = 53.3268, LON = -1.5451;
+  var EVENT_DATE = '2026-07-11';
+  var FORECAST_END = new Date(EVENT_DATE + 'T11:30:00');
+  var FREEZE_TIME  = new Date(EVENT_DATE + 'T13:00:00');
+  var FREEZE_KEY = 'doreGala2026FrozenWeather';
+
+  var WCODES = {
+    0:  ['Clear sky', '☀️'],
+    1:  ['Mainly clear', '🌤️'],
+    2:  ['Partly cloudy', '⛅'],
+    3:  ['Overcast', '☁️'],
+    45: ['Foggy', '🌫️'],
+    48: ['Foggy', '🌫️'],
+    51: ['Light drizzle', '🌦️'],
+    53: ['Drizzle', '🌦️'],
+    55: ['Heavy drizzle', '🌧️'],
+    61: ['Light rain', '🌧️'],
+    63: ['Rain', '🌧️'],
+    65: ['Heavy rain', '🌧️'],
+    71: ['Light snow', '🌨️'],
+    73: ['Snow', '🌨️'],
+    75: ['Heavy snow', '🌨️'],
+    80: ['Rain showers', '🌦️'],
+    81: ['Rain showers', '🌦️'],
+    82: ['Heavy showers', '⛈️'],
+    95: ['Thunderstorm', '⛈️']
+  };
+
+  function describeCode(code) {
+    return WCODES[code] || ['Weather update', '🌤️'];
+  }
+
+  function getLondonNow() {
+    var fmt = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+    });
+    var parts = {};
+    fmt.formatToParts(new Date()).forEach(function (p) { parts[p.type] = p.value; });
+    return new Date(parts.year + '-' + parts.month + '-' + parts.day + 'T' + parts.hour + ':' + parts.minute + ':' + parts.second);
+  }
+
+  function setBadge(el, mode) {
+    el.className = 'weather-badge badge-' + mode;
+    el.textContent = mode === 'forecast' ? 'Forecast' : (mode === 'live' ? 'Live now' : 'Final reading');
+  }
+
+  function render(tempC, code, mode, noteText) {
+    var iconEl = document.getElementById('weatherIcon');
+    var tempEl = document.getElementById('weatherTemp');
+    var descEl = document.getElementById('weatherDesc');
+    var badgeEl = document.getElementById('weatherBadge');
+    var noteEl = document.getElementById('weatherNote');
+    var info = describeCode(code);
+    iconEl.textContent = info[1];
+    tempEl.textContent = (tempC === null || tempC === undefined) ? '–' : Math.round(tempC) + '°C';
+    descEl.textContent = info[0];
+    setBadge(badgeEl, mode);
+    noteEl.textContent = noteText;
+  }
+
+  function renderError(message) {
+    document.getElementById('weatherDesc').textContent = message;
+  }
+
+  function fetchForecast() {
+    var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + LAT + '&longitude=' + LON +
+      '&hourly=temperature_2m,weathercode&timezone=Europe%2FLondon&start_date=' + EVENT_DATE + '&end_date=' + EVENT_DATE;
+    fetch(url).then(function (r) { return r.json(); }).then(function (data) {
+      var times = data.hourly.time;
+      var idx = times.indexOf(EVENT_DATE + 'T12:00');
+      if (idx === -1) idx = 12;
+      var temp = data.hourly.temperature_2m[idx];
+      var code = data.hourly.weathercode[idx];
+      render(temp, code, 'forecast', 'Forecast for the parade window, 12:00–12:30pm, 11 July.');
+    }).catch(function () { renderError('Forecast unavailable right now.'); });
+  }
+
+  function fetchLive() {
+    var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + LAT + '&longitude=' + LON +
+      '&current_weather=true&timezone=Europe%2FLondon';
+    fetch(url).then(function (r) { return r.json(); }).then(function (data) {
+      var cw = data.current_weather;
+      render(cw.temperature, cw.weathercode, 'live', 'Live conditions near Dore — updates automatically.');
+    }).catch(function () { renderError('Live weather unavailable right now.'); });
+  }
+
+  function showFrozen(temp, code) {
+    render(temp, code, 'frozen', 'Final reading captured around the parade — no longer updating.');
+  }
+
+  function fetchAndFreeze() {
+    var cached = localStorage.getItem(FREEZE_KEY);
+    if (cached) {
+      var parsed = JSON.parse(cached);
+      showFrozen(parsed.temp, parsed.code);
+      return;
+    }
+    var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + LAT + '&longitude=' + LON +
+      '&current_weather=true&timezone=Europe%2FLondon';
+    fetch(url).then(function (r) { return r.json(); }).then(function (data) {
+      var cw = data.current_weather;
+      localStorage.setItem(FREEZE_KEY, JSON.stringify({ temp: cw.temperature, code: cw.weathercode }));
+      showFrozen(cw.temperature, cw.weathercode);
+    }).catch(function () { renderError('No reading captured.'); });
+  }
+
+  var liveInterval = null;
+
+  function tick() {
+    var now = getLondonNow();
+    if (now >= FREEZE_TIME) {
+      if (liveInterval) { clearInterval(liveInterval); liveInterval = null; }
+      fetchAndFreeze();
+    } else if (now >= FORECAST_END) {
+      fetchLive();
+      if (!liveInterval) { liveInterval = setInterval(fetchLive, 5 * 60 * 1000); }
+    } else {
+      fetchForecast();
+    }
+  }
+
+  tick();
+  setInterval(function () {
+    var now = getLondonNow();
+    if (now < FORECAST_END) tick();
+  }, 30 * 60 * 1000);
+})();
+</script>
 
 </body>
 </html>
